@@ -1,0 +1,483 @@
+html = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODM Checker — Web</title>
+<style>
+:root{
+  --bg:#0a0a0f; --panel:#12121c; --border:#1e1e30;
+  --cyan:#00e5ff; --green:#00ff88; --red:#ff3355;
+  --yellow:#ffcc00; --magenta:#ff44ff; --dim:#555577;
+  --text:#e0e0f0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,monospace;min-height:100vh}
+a{color:var(--cyan)}
+
+/* ── header ── */
+header{padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-size:22px;font-weight:800;
+  background:linear-gradient(90deg,var(--cyan),var(--magenta));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{font-size:11px;padding:3px 8px;border-radius:4px;
+  background:var(--panel);border:1px solid var(--border);color:var(--dim)}
+.net-badge{color:var(--green);border-color:var(--green)}
+
+/* ── layout ── */
+main{display:grid;grid-template-columns:340px 1fr;gap:0;
+  min-height:calc(100vh - 60px)}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+
+/* ── left panel ── */
+.left{border-right:1px solid var(--border);padding:16px;
+  overflow-y:auto;max-height:calc(100vh - 60px)}
+@media(max-width:800px){.left{border-right:none;border-bottom:1px solid var(--border);max-height:none}}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:2px;
+  color:var(--dim);margin:16px 0 8px}
+h3:first-child{margin-top:0}
+
+/* mode tabs */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mode-btn{padding:10px;border:1px solid var(--border);border-radius:8px;
+  background:var(--panel);color:var(--text);cursor:pointer;
+  font-size:13px;font-weight:600;transition:.15s;text-align:center}
+.mode-btn:hover{border-color:var(--cyan)}
+.mode-btn.active{border-color:var(--cyan);background:rgba(0,229,255,.08);
+  color:var(--cyan)}
+
+/* inputs */
+label{display:block;font-size:11px;color:var(--dim);margin:10px 0 4px}
+input,select{width:100%;padding:9px 10px;border-radius:6px;
+  border:1px solid var(--border);background:var(--bg);color:var(--text);
+  font-size:13px;outline:none}
+input:focus,select:focus{border-color:var(--cyan)}
+input[type=checkbox]{width:auto;margin-right:6px}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;
+  margin-top:10px;cursor:pointer}
+
+/* upload */
+.drop{border:2px dashed var(--border);border-radius:8px;padding:20px;
+  text-align:center;cursor:pointer;transition:.15s;font-size:13px}
+.drop:hover,.drop.over{border-color:var(--cyan);background:rgba(0,229,255,.05)}
+.file-list{margin-top:8px;font-size:12px}
+.file-item{display:flex;justify-content:space-between;padding:6px 8px;
+  border-radius:4px;cursor:pointer;color:var(--dim)}
+.file-item:hover{background:var(--panel);color:var(--text)}
+.file-item.sel{color:var(--cyan)}
+
+/* buttons */
+.btn{width:100%;padding:11px;border:none;border-radius:8px;
+  font-size:14px;font-weight:700;cursor:pointer;transition:.15s;margin-top:14px}
+.btn-start{background:linear-gradient(90deg,var(--cyan),#0099ff);color:#000}
+.btn-start:hover{opacity:.85}
+.btn-stop{background:var(--red);color:#fff;display:none}
+.btn-dl{background:var(--panel);border:1px solid var(--border);
+  color:var(--cyan);display:none}
+
+/* ── right panel ── */
+.right{display:flex;flex-direction:column;max-height:calc(100vh - 60px)}
+@media(max-width:800px){.right{max-height:none}}
+
+/* stats bar */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+  gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.stat{background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:10px;text-align:center}
+.stat .v{font-size:20px;font-weight:800}
+.stat .l{font-size:10px;color:var(--dim);text-transform:uppercase;
+  letter-spacing:1px;margin-top:2px}
+.v-green{color:var(--green)} .v-red{color:var(--red)}
+.v-cyan{color:var(--cyan)} .v-yellow{color:var(--yellow)}
+.v-magenta{color:var(--magenta)}
+
+/* progress */
+.prog-wrap{padding:10px 16px;border-bottom:1px solid var(--border)}
+.prog{height:6px;background:var(--panel);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;width:0%;border-radius:3px;
+  background:linear-gradient(90deg,var(--cyan),var(--magenta));
+  transition:width .4s}
+.prog-meta{display:flex;justify-content:space-between;font-size:11px;
+  color:var(--dim);margin-top:5px}
+
+/* results table */
+.res-wrap{flex:1;overflow-y:auto;padding:0 16px 16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--bg);padding:8px 6px;text-align:left;
+  color:var(--dim);font-size:10px;text-transform:uppercase;
+  letter-spacing:1px;border-bottom:1px solid var(--border);z-index:2}
+td{padding:7px 6px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tag{display:inline-block;padding:2px 7px;border-radius:3px;
+  font-size:10px;font-weight:700}
+.tag-clean{background:rgba(0,255,136,.12);color:var(--green)}
+.tag-nc{background:rgba(255,204,0,.12);color:var(--yellow)}
+.tag-noc{background:rgba(255,68,255,.12);color:var(--magenta)}
+.tag-err{background:rgba(255,51,85,.12);color:var(--red)}
+.tag-val{background:rgba(0,229,255,.12);color:var(--cyan)}
+
+/* log */
+.log-wrap{height:160px;overflow-y:auto;border-top:1px solid var(--border);
+  padding:10px 16px;font-size:11px;font-family:monospace;
+  background:#08080d}
+.log-line{margin-bottom:2px;color:var(--dim)}
+.log-line .t{color:#333355;margin-right:6px}
+.log-success{color:var(--green)} .log-error{color:var(--red)}
+.log-info{color:var(--dim)}
+
+/* telegram box */
+.tg-box{background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:10px;margin-top:10px;display:none}
+.tg-box.open{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">◈ CODM CHECKER</div>
+  <span class="badge">web v1.0</span>
+  <span class="badge">termux edition</span>
+  <span class="badge net-badge" id="netBadge">● ready</span>
+</header>
+
+<main>
+<!-- ═══ LEFT ═══ -->
+<div class="left">
+
+  <h3>Mode</h3>
+  <div class="modes">
+    <button class="mode-btn active" data-mode="bulk">📁 Bulk</button>
+    <button class="mode-btn" data-mode="single">👤 Single</button>
+    <button class="mode-btn" data-mode="validator">⬡ Validator</button>
+    <button class="mode-btn" data-mode="hunter">🎯 Hunter</button>
+  </div>
+
+  <!-- single fields -->
+  <div id="singleFields" style="display:none">
+    <label>Username / Email</label>
+    <input id="inAccount" placeholder="garena username">
+    <label>Password</label>
+    <input id="inPassword" type="password" placeholder="password">
+  </div>
+
+  <!-- combo file (bulk/validator/hunter) -->
+  <div id="fileSection">
+    <h3>Combo File</h3>
+    <div class="drop" id="dropZone">
+      Drop .txt here or tap to upload<br>
+      <small style="color:var(--dim)">format: account:password per line</small>
+      <input type="file" id="fileInput" accept=".txt" style="display:none">
+    </div>
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- hunter filter -->
+  <div id="hunterFields" style="display:none">
+    <label>Game Filter</label>
+    <input id="inGameFilter" placeholder="e.g. rov th, codm ph, freefire id">
+    <small style="color:var(--dim);font-size:11px">
+      Empty = all games all regions
+    </small>
+  </div>
+
+  <h3>Options</h3>
+  <label>Threads</label>
+  <input id="inThreads" type="number" value="5" min="1" max="50">
+
+  <label class="chk" id="chkGamesWrap">
+    <input type="checkbox" id="chkGames"> Check other Garena games
+  </label>
+  <label class="chk" id="chkRemoveWrap">
+    <input type="checkbox" id="chkRemove"> Auto-remove checked lines
+  </label>
+  <label class="chk" id="chkTgWrap">
+    <input type="checkbox" id="chkTg"> Telegram notifications
+  </label>
+
+  <div class="tg-box" id="tgBox">
+    <label>Bot Token</label>
+    <input id="inTgToken" placeholder="123456:ABC-DEF...">
+    <label>Chat ID</label>
+    <input id="inTgChat" placeholder="123456789">
+  </div>
+
+  <button class="btn btn-start" id="btnStart">▶ START</button>
+  <button class="btn btn-stop" id="btnStop">■ STOP</button>
+  <button class="btn btn-dl" id="btnDl">⬇ DOWNLOAD RESULTS</button>
+</div>
+
+<!-- ═══ RIGHT ═══ -->
+<div class="right">
+  <div class="stats">
+    <div class="stat"><div class="v" id="stDone">0</div><div class="l">Done</div></div>
+    <div class="stat"><div class="v v-green" id="stValid">0</div><div class="l">Valid</div></div>
+    <div class="stat"><div class="v v-red" id="stInvalid">0</div><div class="l">Invalid</div></div>
+    <div class="stat"><div class="v v-cyan" id="stClean">0</div><div class="l">Clean</div></div>
+    <div class="stat"><div class="v v-yellow" id="stNotClean">0</div><div class="l">Not Clean</div></div>
+    <div class="stat"><div class="v v-magenta" id="stCodm">0</div><div class="l">CODM</div></div>
+    <div class="stat"><div class="v v-yellow" id="stShell">0</div><div class="l">Peak Shell</div></div>
+    <div class="stat"><div class="v" id="stLvl">0</div><div class="l">Top Lv</div></div>
+  </div>
+
+  <div class="prog-wrap">
+    <div class="prog"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-meta">
+      <span id="progPct">0%</span>
+      <span id="progRate">— /s</span>
+      <span id="progEta">ETA —</span>
+    </div>
+  </div>
+
+  <div class="res-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Account</th><th>Status</th><th>Lv</th>
+        <th>Region</th><th>IGN</th><th>Shell</th><th>Games</th>
+      </tr></thead>
+      <tbody id="resBody">
+        <tr><td colspan="8" style="text-align:center;color:var(--dim);padding:30px">
+          No results yet — start a job
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="log-wrap" id="logWrap">
+    <div class="log-line"><span class="t">--:--:--</span>ready.</div>
+  </div>
+</div>
+</main>
+
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script>
+// ── state ──────────────────────────────────────────────
+let mode       = 'bulk';
+let jobId      = null;
+let uploaded   = null;   // {filename, accounts, path}
+let selectedFile = null;
+let resultCount = 0;
+let startTime  = null;
+let doneCount  = 0;
+
+const $ = id => document.getElementById(id);
+
+// ── socket ─────────────────────────────────────────────
+const socket = io();
+socket.on('stats', d => {
+  if (d.job !== jobId) return;
+  updateStats(d.stats, d.total, d.elapsed);
+});
+socket.on('result', d => {
+  if (d.job !== jobId) return;
+  addResult(d.result);
+});
+socket.on('log', d => {
+  if (d.job !== jobId) return;
+  addLog(d.msg, d.level, d.time);
+});
+
+// ── mode switch ────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+    $('singleFields').style.display  = mode === 'single' ? 'block' : 'none';
+    $('fileSection').style.display   = mode === 'single' ? 'none'  : 'block';
+    $('hunterFields').style.display  = mode === 'hunter' ? 'block' : 'none';
+    $('chkGamesWrap').style.display  = mode === 'single' || mode === 'bulk' ? 'flex' : 'none';
+    $('chkRemoveWrap').style.display = mode === 'bulk' ? 'flex' : 'none';
+    $('chkTgWrap').style.display     = mode === 'bulk' ? 'flex' : 'none';
+  };
+});
+
+// ── telegram toggle ────────────────────────────────────
+$('chkTg').onchange = e => $('tgBox').classList.toggle('open', e.target.checked);
+
+// ── file upload ────────────────────────────────────────
+const dz = $('dropZone'), fi = $('fileInput');
+dz.onclick = () => fi.click();
+dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
+dz.ondragleave = () => dz.classList.remove('over');
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); uploadFile(e.dataTransfer.files[0]); };
+fi.onchange = () => fi.files[0] && uploadFile(fi.files[0]);
+
+function uploadFile(f) {
+  if (!f) return;
+  const fd = new FormData();
+  fd.append('file', f);
+  addLog('Uploading ' + f.name + '…', 'info');
+  fetch('/api/upload', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(d => {
+      uploaded = d;
+      addLog(`✔ ${d.filename} — ${d.accounts} accounts`, 'success');
+      loadFileList();
+    })
+    .catch(e => addLog('Upload failed: ' + e, 'error'));
+}
+
+function loadFileList() {
+  fetch('/api/files').then(r=>r.json()).then(d => {
+    const el = $('fileList');
+    el.innerHTML = d.files.map(f =>
+      `<div class="file-item" data-name="${f.name}" data-path="Combo/${f.name}">
+        <span>📄 ${f.name}</span>
+        <span>${f.accounts} acc</span>
+      </div>`).join('');
+    el.querySelectorAll('.file-item').forEach(item => {
+      item.onclick = () => {
+        el.querySelectorAll('.file-item').forEach(i=>i.classList.remove('sel'));
+        item.classList.add('sel');
+        selectedFile = {filename: item.dataset.name, path: item.dataset.path};
+        addLog('Selected: ' + item.dataset.name, 'info');
+      };
+    });
+  });
+}
+loadFileList();
+
+// ── start / stop ───────────────────────────────────────
+$('btnStart').onclick = () => {
+  const body = {mode, threads: parseInt($('inThreads').value)||5};
+
+  if (mode === 'single') {
+    body.account = $('inAccount').value.trim();
+    body.password = $('inPassword').value.trim();
+    if (!body.account || !body.password) { addLog('Fill account + password','error'); return; }
+  } else {
+    const src = uploaded || selectedFile;
+    if (!src) { addLog('Upload or select a combo file','error'); return; }
+    body.filename = src.filename;
+    body.combo_path = src.path;
+  }
+
+  if (mode === 'hunter') body.game_filter = $('inGameFilter').value;
+
+  body.check_games = $('chkGames').checked;
+  body.auto_remove = $('chkRemove').checked;
+
+  if ($('chkTg').checked && $('inTgToken').value) {
+    body.telegram = {
+      enabled: true,
+      token:   $('inTgToken').value.trim(),
+      chat_id: $('inTgChat').value.trim(),
+    };
+  }
+
+  // reset ui
+  $('resBody').innerHTML = '';
+  resultCount = 0; doneCount = 0;
+  $('logWrap').innerHTML = '';
+  addLog('Starting ' + mode + ' job…', 'info');
+
+  fetch('/api/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+    .then(r=>r.json())
+    .then(d => {
+      jobId = d.job_id;
+      startTime = Date.now();
+      $('btnStart').style.display = 'none';
+      $('btnStop').style.display  = 'block';
+      $('netBadge').textContent   = '● running';
+      $('netBadge').style.color   = 'var(--yellow)';
+    });
+};
+
+$('btnStop').onclick = () => {
+  if (!jobId) return;
+  fetch('/api/stop/'+jobId, {method:'POST'}).then(()=>{
+    addLog('Stop requested','warning');
+  });
+};
+
+$('btnDl').onclick = () => {
+  if (jobId) window.open('/api/results/'+jobId);
+};
+
+// ── stats ──────────────────────────────────────────────
+function updateStats(s, total, elapsed) {
+  $('stDone').textContent    = s.done;
+  $('stValid').textContent   = s.valid;
+  $('stInvalid').textContent = s.invalid;
+  $('stClean').textContent   = s.clean;
+  $('stNotClean').textContent= s.not_clean;
+  $('stCodm').textContent    = s.has_codm;
+  $('stShell').textContent   = s.highest_shell || 0;
+  $('stLvl').textContent     = s.highest_clean || 0;
+
+  const pct = total > 0 ? (s.done/total*100) : 0;
+  $('progFill').style.width = pct + '%';
+  $('progPct').textContent  = pct.toFixed(1) + '%';
+  const rate = elapsed > 0 ? (s.done/elapsed) : 0;
+  $('progRate').textContent = rate.toFixed(1) + ' /s';
+  const eta = rate > 0 ? (total - s.done)/rate : 0;
+  $('progEta').textContent  = 'ETA ' + Math.floor(eta/60) + 'm' + Math.floor(eta%60) + 's';
+
+  if (s.done >= total && total > 0) {
+    $('btnStart').style.display = 'block';
+    $('btnStop').style.display  = 'none';
+    $('btnDl').style.display    = 'block';
+    $('netBadge').textContent   = '● done';
+    $('netBadge').style.color   = 'var(--green)';
+  }
+}
+
+// ── results ────────────────────────────────────────────
+function addResult(r) {
+  resultCount++;
+  if (resultCount === 1) $('resBody').innerHTML = '';
+  const tr = document.createElement('tr');
+
+  let statusHtml;
+  if (r.validator) {
+    statusHtml = `<span class="tag tag-val">${r.valid?'VALID':'INVALID'}</span>`;
+  } else if (r.error) {
+    statusHtml = `<span class="tag tag-err">${r.error}</span>`;
+  } else if (r.hunter) {
+    statusHtml = `<span class="tag tag-val">${r.result}</span>`;
+  } else if (r.has_codm) {
+    statusHtml = r.is_clean
+      ? `<span class="tag tag-clean">✔ CLEAN</span>`
+      : `<span class="tag tag-nc">⊘ NOT CLEAN</span>`;
+  } else {
+    statusHtml = `<span class="tag tag-noc">○ NO CODM</span>`;
+  }
+
+  const games = (r.games||[]).map(g=>g.game||g).join(', ');
+
+  tr.innerHTML = `
+    <td>${resultCount}</td>
+    <td style="font-family:monospace">${r.account}</td>
+    <td>${statusHtml}</td>
+    <td>${r.codm_level||'—'}</td>
+    <td>${r.codm_region||'—'}</td>
+    <td>${r.codm_nickname||'—'}</td>
+    <td style="color:var(--yellow)">${r.shell||0}</td>
+    <td style="font-size:11px;color:var(--dim)">${games}</td>`;
+  $('resBody').prepend(tr);
+
+  // cap rows
+  while ($('resBody').children.length > 500)
+    $('resBody').removeChild($('resBody').lastChild);
+}
+
+// ── log ────────────────────────────────────────────────
+function addLog(msg, level='info', t) {
+  const time = t || new Date().toTimeString().slice(0,8);
+  const div = document.createElement('div');
+  div.className = 'log-line log-' + level;
+  div.innerHTML = `<span class="t">${time}</span>${msg}`;
+  $('logWrap').appendChild(div);
+  $('logWrap').scrollTop = $('logWrap').scrollHeight;
+  while ($('logWrap').children.length > 300)
+    $('logWrap').removeChild($('logWrap').firstChild);
+}
+</script>
+</body>
+</html>'''
+
+with open('/mnt/agents/output/codm_web/templates/index.html', 'w') as f:
+    f.write(html)
+print("index.html written:", len(html), "chars")

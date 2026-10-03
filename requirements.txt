@@ -1,0 +1,11 @@
+flask==2.3.2
+flask-socketio==5.3.4
+python-socketio==5.9.0
+python-engineio==4.7.1
+requests==2.31.0
+pycryptodome==18.0.0
+colorama==0.4.6
+rich==13.5.2
+pyfiglet==0.8.1
+gunicorn==21.2.0
+eventlet==0.33.3
